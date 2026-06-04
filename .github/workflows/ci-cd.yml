@@ -1,0 +1,92 @@
+name: CI-CD
+
+# ---------------------------------------------------------------------------
+# Triggers: every push and pull request targeting the main branch.
+# ---------------------------------------------------------------------------
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:   # allows manual runs from the Actions tab
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  SOLUTION: 'CI-CD.slnx'
+  API_PROJECT: 'CI-CD/CI-CD.csproj'
+  CONFIGURATION: 'Release'
+  # Speed up the SDK / avoid first-run noise in CI.
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  # =========================================================================
+  # CI: restore -> build -> test -> publish -> upload artifact
+  # =========================================================================
+  build-test-publish:
+    name: Build, Test & Publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.SOLUTION }}
+
+      - name: Build solution
+        run: dotnet build ${{ env.SOLUTION }} --configuration ${{ env.CONFIGURATION }} --no-restore
+
+      - name: Run unit tests
+        run: >
+          dotnet test ${{ env.SOLUTION }}
+          --configuration ${{ env.CONFIGURATION }}
+          --no-build
+          --logger "trx;LogFileName=test-results.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+
+      - name: Upload test results
+        # Run even when the test step fails, so results are always visible.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./TestResults/**/*
+          retention-days: 7
+
+      - name: Publish test report summary
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Unit Test Report
+          path: ./TestResults/**/*.trx
+          reporter: dotnet-trx
+          fail-on-error: false
+
+      - name: Publish API
+        run: >
+          dotnet publish ${{ env.API_PROJECT }}
+          --configuration ${{ env.CONFIGURATION }}
+          --no-build
+          --output ./publish
+
+      - name: Upload published artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-cd-api
+          path: ./publish
+          retention-days: 7

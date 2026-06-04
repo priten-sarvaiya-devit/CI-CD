@@ -1,0 +1,14 @@
+# Render Blueprint (Infrastructure-as-Code).
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: ci-cd-weather-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true          # redeploy automatically on push to the connected branch
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      # Render automatically provides PORT; the Dockerfile binds Kestrel to it.

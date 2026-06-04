@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="CI-CD.Tests/CI-CD.Tests.csproj" />
+  <Project Path="CI-CD/CI-CD.csproj" />
+</Solution>

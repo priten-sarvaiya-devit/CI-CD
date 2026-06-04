@@ -1,0 +1,15 @@
+@CI_CD_HostAddress = http://localhost:5215
+
+### Get a 5-day forecast (default)
+GET {{CI_CD_HostAddress}}/api/weather
+Accept: application/json
+
+### Get a 7-day forecast
+GET {{CI_CD_HostAddress}}/api/weather?days=7
+Accept: application/json
+
+### Health check
+GET {{CI_CD_HostAddress}}/health
+Accept: application/json
+
+###
