@@ -31,7 +31,7 @@ public class WeatherControllerTests
         var result = _sut.Get(3);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
-        Assert.NotSame(expected, ok.Value);
+        Assert.Same(expected, ok.Value);
         _serviceMock.Verify(s => s.GetForecast(3), Times.Once);
     }
 
