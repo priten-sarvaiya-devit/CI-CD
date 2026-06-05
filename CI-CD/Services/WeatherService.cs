@@ -11,7 +11,7 @@ public class WeatherService : IWeatherService
     private static readonly string[] Summaries =
     [
         "Freezing", "Bracing", "Chilly", "Cool-priten", "Mild",
-        "Warm", "Balmy", "Vanita", "Sweltering", "Scorching"
+        "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
     ];
 
     /// <inheritdoc />
