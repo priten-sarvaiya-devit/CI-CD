@@ -63,6 +63,15 @@ jobs:
           --no-restore
           --output ./publish
 
+      - name: Verify publish output exists
+        # Guard against a "silent" success — fail red if the expected DLL is missing.
+        run: |
+          if [ ! -f "./publish/CI-CD.dll" ]; then
+            echo "::error::Publish produced no CI-CD.dll — build output is invalid."
+            exit 1
+          fi
+          echo "✅ Publish output verified."
+
       - name: Upload published artifact
         uses: actions/upload-artifact@v4
         with:
@@ -98,6 +107,8 @@ jobs:
         run: dotnet restore ${{ env.SOLUTION }}
 
       - name: Run unit tests
+        # dotnet test exits non-zero if ANY test fails or if no tests are found,
+        # which fails this step (red) automatically.
         run: >
           dotnet test ${{ env.SOLUTION }}
           --configuration ${{ env.CONFIGURATION }}
@@ -115,16 +126,15 @@ jobs:
           retention-days: 7
 
       - name: Publish test report summary
-        # Reporting is a convenience, never a gate — don't fail the run if the
-        # token can't create a check (e.g. fork PRs, restricted permissions).
+        # Always run so results show even when tests failed. Any failure here
+        # (e.g. missing token rights) now turns the job RED — no masking.
         if: always()
-        continue-on-error: true
         uses: dorny/test-reporter@v2
         with:
           name: Unit Test Report
           path: ./TestResults/**/*.trx
           reporter: dotnet-trx
-          fail-on-error: false
+          fail-on-error: true
 
   # =========================================================================
   # 3) DEPLOY — runs only after TEST succeeds, and only on push to master
