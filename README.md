@@ -300,11 +300,21 @@ git push -u origin master
   `test-results`.
 
 ### 5. Deploy to Render
-- Sign in at <https://render.com> with GitHub.
-- **New → Blueprint** → select your repo → **Apply**.
-- Wait for the build to finish, then open the generated
-  `https://<service>.onrender.com/api/weather` URL.
-- Every subsequent push to `master` redeploys automatically (`autoDeploy: true`).
+Deployment is **driven by GitHub Actions** — the `deploy` job hits a Render
+Deploy Hook *after* Build and Test pass, so a deploy only happens on green tests.
+
+1. **Create the service:** sign in at <https://render.com> with GitHub →
+   **New → Blueprint** → select your repo → **Apply**. Render builds the
+   `Dockerfile` and gives you a `https://<service>.onrender.com` URL.
+2. **Grab the Deploy Hook:** in Render → service → **Settings → Deploy Hook**,
+   copy the URL.
+3. **Add it to GitHub:** repo **Settings → Secrets and variables → Actions →
+   New repository secret** → name it `RENDER_DEPLOY_HOOK`, paste the URL.
+4. Now every push to `master` runs Build → Test → **Deploy** (which triggers
+   Render). Render's own `autoDeploy` is disabled in `render.yaml` so deploys
+   aren't duplicated — Actions is the single source of truth.
+
+Verify: open `https://<service>.onrender.com/api/weather`.
 
 ### 6. Demonstrating the CI/CD pipeline in a presentation
 A suggested live-demo script:
