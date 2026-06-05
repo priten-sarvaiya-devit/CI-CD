@@ -10,7 +10,7 @@ public class WeatherService : IWeatherService
 {
     private static readonly string[] Summaries =
     [
-        "Freezing", "Bracing", "Chilly", "Cool", "Mild",
+        "Freezing", "Bracing", "Chilly", "Cool-priten", "Mild",
         "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
     ];
 
