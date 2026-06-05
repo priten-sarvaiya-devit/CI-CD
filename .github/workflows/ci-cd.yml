@@ -28,10 +28,10 @@ env:
 
 jobs:
   # =========================================================================
-  # CI: restore -> build -> test -> publish -> upload artifact
+  # 1) BUILD — restore, compile, publish the API, and upload the artifact
   # =========================================================================
-  build-test-publish:
-    name: Build, Test & Publish
+  build:
+    name: Build
     runs-on: ubuntu-latest
 
     steps:
@@ -56,11 +56,51 @@ jobs:
       - name: Build solution
         run: dotnet build ${{ env.SOLUTION }} --configuration ${{ env.CONFIGURATION }} --no-restore
 
+      - name: Publish API
+        run: >
+          dotnet publish ${{ env.API_PROJECT }}
+          --configuration ${{ env.CONFIGURATION }}
+          --no-restore
+          --output ./publish
+
+      - name: Upload published artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-cd-api
+          path: ./publish
+          retention-days: 7
+
+  # =========================================================================
+  # 2) TEST — runs only after BUILD succeeds; runs unit tests + report
+  # =========================================================================
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.SOLUTION }}
+
       - name: Run unit tests
         run: >
           dotnet test ${{ env.SOLUTION }}
           --configuration ${{ env.CONFIGURATION }}
-          --no-build
           --logger "trx;LogFileName=test-results.trx"
           --collect:"XPlat Code Coverage"
           --results-directory ./TestResults
@@ -86,16 +126,33 @@ jobs:
           reporter: dotnet-trx
           fail-on-error: false
 
-      - name: Publish API
-        run: >
-          dotnet publish ${{ env.API_PROJECT }}
-          --configuration ${{ env.CONFIGURATION }}
-          --no-build
-          --output ./publish
+  # =========================================================================
+  # 3) DEPLOY — runs only after TEST succeeds, and only on push to master
+  #             (skipped for pull requests). Triggers a Render deployment
+  #             via a Deploy Hook stored in the RENDER_DEPLOY_HOOK secret.
+  # =========================================================================
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
-      - name: Upload published artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-cd-api
-          path: ./publish
-          retention-days: 7
+    steps:
+      - name: Trigger Render deployment
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK secret is not set — skipping the actual deploy."
+            echo "Add it under Settings → Secrets and variables → Actions to enable auto-deploy."
+            exit 0
+          fi
+          echo "Triggering Render deployment..."
+          http_code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$RENDER_DEPLOY_HOOK")
+          echo "Render responded with HTTP $http_code"
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            echo "✅ Deployment triggered successfully."
+          else
+            echo "::error::Render deploy hook returned HTTP $http_code"
+            exit 1
+          fi

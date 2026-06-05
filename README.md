@@ -99,22 +99,31 @@ the HTTP layer. This is the core of the testability story.
       │  git push / open PR  →  master
       ▼
 ┌──────────────────────────────────────────────────────────┐
-│                   GitHub Actions (CI)                      │
+│                   GitHub Actions                           │
 │                                                            │
-│  Checkout → Setup .NET 10 → Restore → Build → Test →       │
-│  Upload Test Results → Publish API → Upload Artifact       │
+│   ┌─────────┐     ┌────────┐     ┌──────────┐              │
+│   │  BUILD  │ ──▶ │  TEST  │ ──▶ │  DEPLOY  │              │
+│   └─────────┘     └────────┘     └──────────┘              │
+│   restore +       run xUnit      trigger Render            │
+│   build +         tests +        deploy hook               │
+│   publish         report         (push only)               │
 └──────────────────────────────────────────────────────────┘
-      │  push to master (autoDeploy)
+      │  Deploy job calls Render Deploy Hook
       ▼
 ┌──────────────────────────────────────────────────────────┐
-│                    Render.com (CD)                         │
+│                    Render.com                              │
 │   Pull repo → docker build (Dockerfile) → run container    │
 │   → live at https://<service>.onrender.com                 │
 └──────────────────────────────────────────────────────────┘
 ```
 
-- **CI** runs on every push and pull request to `master`.
-- **CD** is handled by Render's `autoDeploy`, triggered on push to `master`.
+The pipeline is split into **three sequential jobs** — each renders as its own
+block in the Actions run graph, and each only starts if the previous one passes:
+
+- **Build** — runs on every push and pull request to `master`.
+- **Test** — runs after Build succeeds (`needs: build`).
+- **Deploy** — runs after Test succeeds, **only on push to `master`** (skipped for
+  pull requests). It triggers Render via a Deploy Hook secret.
 
 ---
 
@@ -172,8 +181,10 @@ and argument validation), and the controller (verified with **Moq**).
 ## ⚙️ GitHub Actions Pipeline Explanation
 
 The pipeline lives in [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml)
-and runs on `ubuntu-latest`. Step by step:
+and is split into **three jobs** that run sequentially on `ubuntu-latest`. Each
+job appears as its own block in the Actions run graph, chained with `needs:`.
 
+### Job 1 — `build`
 | Step                      | What it does                                                                 |
 |---------------------------|------------------------------------------------------------------------------|
 | **Checkout source**       | Clones the repository into the runner.                                       |
@@ -181,11 +192,27 @@ and runs on `ubuntu-latest`. Step by step:
 | **Cache NuGet packages**  | Caches `~/.nuget/packages` keyed on the `.csproj` hashes to speed up restore.|
 | **Restore dependencies**  | `dotnet restore` — pulls all NuGet packages.                                 |
 | **Build solution**        | `dotnet build -c Release --no-restore`.                                      |
-| **Run unit tests**        | `dotnet test` with a `.trx` logger and `XPlat Code Coverage` collection.     |
-| **Upload test results**   | Uploads the `TestResults` folder as an artifact (`if: always()`).            |
-| **Publish test report**   | Renders the `.trx` file as a readable check in the PR.                       |
 | **Publish API**           | `dotnet publish` produces the deployable output in `./publish`.              |
 | **Upload artifact**       | Uploads `./publish` as the `ci-cd-api` artifact (downloadable from the run). |
+
+### Job 2 — `test` (`needs: build`)
+| Step                      | What it does                                                                 |
+|---------------------------|------------------------------------------------------------------------------|
+| **Restore + build**       | Restores packages (build is implicit in `dotnet test`).                      |
+| **Run unit tests**        | `dotnet test` with a `.trx` logger and `XPlat Code Coverage` collection.     |
+| **Upload test results**   | Uploads the `TestResults` folder as an artifact (`if: always()`).            |
+| **Publish test report**   | Renders the `.trx` file as a readable check (non-fatal).                      |
+
+### Job 3 — `deploy` (`needs: test`, push to `master` only)
+| Step                      | What it does                                                                 |
+|---------------------------|------------------------------------------------------------------------------|
+| **Trigger Render deploy** | POSTs to the `RENDER_DEPLOY_HOOK` secret URL to kick off a Render deploy.     |
+
+> **Enabling the Deploy job:** add a repository secret named `RENDER_DEPLOY_HOOK`
+> (Settings → Secrets and variables → Actions → New repository secret). Paste the
+> **Deploy Hook URL** from your Render service (Settings → Deploy Hook). Until the
+> secret is set, the Deploy job runs but logs a warning and skips the actual call,
+> so the pipeline still goes green.
 
 The triggers are defined at the top of the file:
 
