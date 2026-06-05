@@ -23,7 +23,7 @@ public class WeatherController : ControllerBase
         ILogger<WeatherController> logger)
     {
         _weatherService = weatherService;
-        _logger = logger
+        _logger = logger;
     }
 
     /// <summary>
