@@ -142,10 +142,11 @@ jobs:
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
+          # A Deploy job that didn't deploy must NOT report success.
           if [ -z "$RENDER_DEPLOY_HOOK" ]; then
-            echo "::warning::RENDER_DEPLOY_HOOK secret is not set — skipping the actual deploy."
-            echo "Add it under Settings → Secrets and variables → Actions to enable auto-deploy."
-            exit 0
+            echo "::error::RENDER_DEPLOY_HOOK secret is not set — cannot deploy."
+            echo "Add it under Settings → Secrets and variables → Actions, then re-run."
+            exit 1
           fi
           echo "Triggering Render deployment..."
           http_code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$RENDER_DEPLOY_HOOK")
@@ -153,6 +154,6 @@ jobs:
           if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
             echo "✅ Deployment triggered successfully."
           else
-            echo "::error::Render deploy hook returned HTTP $http_code"
+            echo "::error::Render deploy hook returned HTTP $http_code — deploy failed."
             exit 1
           fi

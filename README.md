@@ -210,9 +210,9 @@ job appears as its own block in the Actions run graph, chained with `needs:`.
 
 > **Enabling the Deploy job:** add a repository secret named `RENDER_DEPLOY_HOOK`
 > (Settings → Secrets and variables → Actions → New repository secret). Paste the
-> **Deploy Hook URL** from your Render service (Settings → Deploy Hook). Until the
-> secret is set, the Deploy job runs but logs a warning and skips the actual call,
-> so the pipeline still goes green.
+> **Deploy Hook URL** from your Render service (Settings → Deploy Hook). If the
+> secret is missing — or Render returns a non-success response — the Deploy job
+> **fails (red)**. A green Deploy means the deployment was actually triggered.
 
 The triggers are defined at the top of the file:
 
