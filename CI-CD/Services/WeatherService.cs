@@ -20,7 +20,7 @@ public class WeatherService : IWeatherService
         if (days < 1)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(days), days, "The number of days must be at least 1.");
+                nameof(days), days, "The number of days must be at least 1."); 
         }
 
         return Enumerable.Range(1, days)
