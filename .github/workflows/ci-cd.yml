@@ -1,7 +1,7 @@
 name: CI-CD
 
 # ---------------------------------------------------------------------------
-# Triggers: every push and pull request targeting the main branch.
+# Triggers: every push and pull request targeting the master branch.
 # ---------------------------------------------------------------------------
 on:
   push:
@@ -9,6 +9,12 @@ on:
   pull_request:
     branches: [ master ]
   workflow_dispatch:   # allows manual runs from the Actions tab
+
+# Grant the GITHUB_TOKEN the rights the test reporter needs to publish a check.
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
 
 env:
   DOTNET_VERSION: '10.0.x'
@@ -69,8 +75,11 @@ jobs:
           retention-days: 7
 
       - name: Publish test report summary
+        # Reporting is a convenience, never a gate — don't fail the run if the
+        # token can't create a check (e.g. fork PRs, restricted permissions).
         if: always()
-        uses: dorny/test-reporter@v1
+        continue-on-error: true
+        uses: dorny/test-reporter@v2
         with:
           name: Unit Test Report
           path: ./TestResults/**/*.trx
