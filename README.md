@@ -1,6 +1,6 @@
 # CI-CD Weather API
 
-[![CI-CD](https://github.com/<your-username>/<your-repo>/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/<your-username>/<your-repo>/actions/workflows/ci-cd.yml)
+[![CI-CD](https://github.com/priten-sarvaiya-devit/CI-CD/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/priten-sarvaiya-devit/CI-CD/actions/workflows/ci-cd.yml)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -8,9 +8,6 @@ A small, production-shaped **ASP.NET Core Web API** built to demonstrate an
 **enterprise-grade CI/CD pipeline** end to end: clean architecture, dependency
 injection, automated unit testing with xUnit, a GitHub Actions pipeline, and
 free deployment to Render.com.
-
-> Replace `<your-username>/<your-repo>` in the badges above with your actual
-> GitHub repository path so the build badge renders.
 
 ---
 
@@ -99,7 +96,7 @@ the HTTP layer. This is the core of the testability story.
 
 ```
    Developer
-      │  git push / open PR  →  main
+      │  git push / open PR  →  master
       ▼
 ┌──────────────────────────────────────────────────────────┐
 │                   GitHub Actions (CI)                      │
@@ -107,7 +104,7 @@ the HTTP layer. This is the core of the testability story.
 │  Checkout → Setup .NET 10 → Restore → Build → Test →       │
 │  Upload Test Results → Publish API → Upload Artifact       │
 └──────────────────────────────────────────────────────────┘
-      │  push to main (autoDeploy)
+      │  push to master (autoDeploy)
       ▼
 ┌──────────────────────────────────────────────────────────┐
 │                    Render.com (CD)                         │
@@ -116,8 +113,8 @@ the HTTP layer. This is the core of the testability story.
 └──────────────────────────────────────────────────────────┘
 ```
 
-- **CI** runs on every push and pull request to `main`.
-- **CD** is handled by Render's `autoDeploy`, triggered on push to `main`.
+- **CI** runs on every push and pull request to `master`.
+- **CD** is handled by Render's `autoDeploy`, triggered on push to `master`.
 
 ---
 
@@ -195,9 +192,9 @@ The triggers are defined at the top of the file:
 ```yaml
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:   # manual run button
 ```
 
@@ -258,9 +255,8 @@ cd e:/Projects/CI-CD/CI-CD
 git init
 git add .
 git commit -m "Initial commit: enterprise CI/CD weather API"
-git branch -M main
-git remote add origin https://github.com/<your-username>/<your-repo>.git
-git push -u origin main
+git remote add origin https://github.com/priten-sarvaiya-devit/CI-CD.git
+git push -u origin master
 ```
 
 ### 3. Enable GitHub Actions
@@ -281,7 +277,7 @@ git push -u origin main
 - **New → Blueprint** → select your repo → **Apply**.
 - Wait for the build to finish, then open the generated
   `https://<service>.onrender.com/api/weather` URL.
-- Every subsequent push to `main` redeploys automatically (`autoDeploy: true`).
+- Every subsequent push to `master` redeploys automatically (`autoDeploy: true`).
 
 ### 6. Demonstrating the CI/CD pipeline in a presentation
 A suggested live-demo script:
