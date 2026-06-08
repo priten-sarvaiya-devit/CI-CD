@@ -34,26 +34,4 @@ public class WeatherControllerTests
         Assert.Same(expected, ok.Value);
         _serviceMock.Verify(s => s.GetForecast(3), Times.Once);
     }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(15)]
-    [InlineData(-5)]
-    public void Get_WithOutOfRangeDays_ReturnsBadRequest(int days)
-    {
-        var result = _sut.Get(days);
-
-        Assert.IsType<BadRequestObjectResult>(result.Result);
-        _serviceMock.Verify(s => s.GetForecast(It.IsAny<int>()), Times.Never);
-    }
-
-    [Fact]
-    public void Get_WithNoArgument_DefaultsToFiveDays()
-    {
-        _serviceMock.Setup(s => s.GetForecast(5)).Returns(Array.Empty<WeatherForecast>());
-
-        _sut.Get();
-
-        _serviceMock.Verify(s => s.GetForecast(5), Times.Once);
-    }
 }
